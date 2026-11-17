@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>WebRTC spike</title>
+<style>
+  body { background: #0f172a; color: #f8fafc; font: 13px system-ui; margin: 12px; }
+  video { background: #000; border: 1px solid #334155; cursor: crosshair; max-width: 100%; }
+  pre { color: #94a3b8; }
+</style>
+</head>
+<body>
+<button id="start">Akışı başlat</button>
+<p>Videoya tıklayın veya video odaktayken tuşa basın: girdi DataChannel ile programa gider.</p>
+<video id="v" autoplay muted playsinline tabindex="0"></video>
+<pre id="out">bekleniyor…</pre>
+<canvas id="c" width="384" height="8" hidden></canvas>
+<script>
+const STAMP_BITS = 48, BLOCK = 8;
+const v = document.getElementById("v"), out = document.getElementById("out");
+const ctx = document.getElementById("c").getContext("2d", { willReadFrequently: true });
+window.__stats = { latencies: [], frames: 0, started: 0, codec: null, inputSent: 0 };
+let dc;
+
+function decodeStamp() {
+  ctx.drawImage(v, 0, 0, STAMP_BITS * BLOCK, BLOCK, 0, 0, STAMP_BITS * BLOCK, BLOCK);
+  const px = ctx.getImageData(0, 0, STAMP_BITS * BLOCK, BLOCK).data;
+  let ms = 0;
+  for (let b = 0; b < STAMP_BITS; b++) {
+    const i = ((BLOCK / 2) * STAMP_BITS * BLOCK + b * BLOCK + BLOCK / 2) * 4; // blok merkezi
+    ms = ms * 2 + (px[i] > 127 ? 1 : 0);
+  }
+  return ms;
+}
+
+function onFrame() {
+  const s = window.__stats;
+  if (!s.started) s.started = performance.now();
+  s.frames++;
+  const stamp = decodeStamp();
+  const lat = Date.now() - stamp;
+  if (lat >= 0 && lat < 5000) s.latencies.push(lat);
+  v.requestVideoFrameCallback(onFrame);
+}
+
+function summary() {
+  const s = window.__stats, l = [...s.latencies].sort((a, b) => a - b);
+  const q = (p) => l.length ? l[Math.min(l.length - 1, Math.floor(p * l.length))] : null;
+  const secs = (performance.now() - s.started) / 1000;
+  return { fps: s.started ? +(s.frames / secs).toFixed(1) : 0, frames: s.frames, samples: l.length,
+           latency_median_ms: q(0.5), latency_p95_ms: q(0.95), codec: s.codec,
+           size: [v.videoWidth, v.videoHeight], inputSent: s.inputSent, decodedFps: s.decodedFps,
+           framesDecoded: s.framesDecoded, framesDropped: s.framesDropped, jitterBufferMs: s.jitterBufferMs,
+           decodeMs: s.decodeMs, visibility: s.visibility };
+}
+window.__summary = summary;
+
+async function start() {
+  const pc = new RTCPeerConnection();
+  window.__pc = pc;
+  pc.addTransceiver("video", { direction: "recvonly" });
+  dc = pc.createDataChannel("input");
+  pc.ontrack = (e) => { v.srcObject = e.streams[0] ?? new MediaStream([e.track]); };
+  await pc.setLocalDescription(await pc.createOffer());
+  await new Promise((r) => pc.iceGatheringState === "complete" ? r() :
+    pc.addEventListener("icegatheringstatechange", () => pc.iceGatheringState === "complete" && r()));
+  const res = await fetch("/offer", { method: "POST", headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify(pc.localDescription) });
+  await pc.setRemoteDescription(await res.json());
+  v.requestVideoFrameCallback(onFrame);
+  setInterval(async () => {
+    const stats = await pc.getStats();
+    stats.forEach((r) => {
+      if (r.type === "codec" && r.mimeType?.startsWith("video")) window.__stats.codec = r.mimeType;
+      if (r.type === "inbound-rtp" && r.kind === "video") {
+        // Oluşturma (rVFC) kısılsa bile kod çözme sayaçları gerçek alım hızını gösterir.
+        Object.assign(window.__stats, { decodedFps: r.framesPerSecond, framesDecoded: r.framesDecoded,
+          framesDropped: r.framesDropped, jitterBufferMs: r.jitterBufferEmittedCount ?
+            Math.round(1000 * r.jitterBufferDelay / r.jitterBufferEmittedCount) : null,
+          decodeMs: r.framesDecoded ? Math.round(1000 * r.totalDecodeTime / r.framesDecoded * 10) / 10 : null,
+          kbps: null, visibility: document.visibilityState });
+      }
+    });
+    out.textContent = JSON.stringify(summary(), null, 1);
+  }, 1000);
+}
+
+const send = (msg) => { if (dc?.readyState === "open") { dc.send(JSON.stringify(msg)); window.__stats.inputSent++; } };
+v.addEventListener("click", (e) => {
+  const r = v.getBoundingClientRect();
+  send({ type: "click", x: (e.clientX - r.left) * v.videoWidth / r.width, y: (e.clientY - r.top) * v.videoHeight / r.height });
+  v.focus();
+});
+v.addEventListener("keydown", (e) => { if (e.key.length === 1) send({ type: "key", key: e.key }); });
+window.__send = send;
+document.getElementById("start").onclick = start;
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Tarayıcıda OpenGL — spike</title>
+<style>
+  body { background: #0f172a; color: #f8fafc; font: 13px system-ui; margin: 12px; display: grid; gap: 8px;
+         grid-template-columns: 1fr 820px; }
+  textarea { width: 100%; height: 600px; background: #1b2336; color: #f8fafc; font: 12px Consolas, monospace; border: 1px solid #334155; }
+  canvas { background: #000; border: 1px solid #334155; width: 800px; height: 600px; outline: none; }
+  pre { background: #000; color: #cbd5e1; height: 160px; overflow: auto; margin: 0; padding: 6px; font: 12px Consolas, monospace; }
+  button, select { height: 28px; }
+</style>
+</head>
+<body>
+<div>
+  <select id="example">
+    <option value="../../templates/legacy-freeglut/src/main.c">Dönen üçgen</option>
+    <option value="../../templates/legacy-freeglut/examples/sekiller/src/main.c">Şekiller</option>
+    <option value="../../templates/legacy-freeglut/examples/etkilesim/src/main.c">Klavye ve fare</option>
+  </select>
+  <button id="run">Derle ve çalıştır</button>
+  <button id="stop">Durdur</button>
+  <span id="status">derleyici yüklenmedi</span>
+  <textarea id="src" spellcheck="false"></textarea>
+</div>
+<div>
+  <canvas id="c" tabindex="0" width="800" height="600"></canvas>
+  <pre id="out"></pre>
+</div>
+<script type="module">
+import { runProgram } from "./runtime/runtime.js";
+
+const $ = (id) => document.getElementById(id);
+const out = (t) => { $("out").textContent += t; $("out").scrollTop = 1e9; };
+const params = new URLSearchParams(location.search);
+window.__metrics = {};
+let program = null;
+let reqId = 0;
+const pending = new Map();
+const worker = new Worker("./compiler-worker.js", { type: "module" });
+worker.onmessage = ({ data }) => {
+  if (data.progress !== undefined) { $("status").textContent = `derleyici indiriliyor %${Math.round(data.progress * 100)}`; return; }
+  pending.get(data.id)?.(data);
+  pending.delete(data.id);
+};
+const compile = (source) => new Promise((resolve) => { const id = ++reqId; pending.set(id, resolve); worker.postMessage({ id, source }); });
+
+async function loadExample() {
+  $("src").value = await (await fetch($("example").value)).text();
+}
+
+async function run() {
+  program?.stop();
+  $("out").textContent = "";
+  $("status").textContent = "derleniyor…";
+  const r = await compile($("src").value);
+  const first = window.__metrics.firstCompileMs === undefined;
+  if (first) window.__metrics.firstCompileMs = Math.round(r.ms); else window.__metrics.compileMs = Math.round(r.ms);
+  if (r.stderr) out(r.stderr);
+  if (!r.ok) { $("status").textContent = "derleme başarısız"; window.__metrics.lastResult = "compile-error"; return; }
+  window.__metrics.wasmBytes = r.wasm.length;
+  $("status").textContent = `derlendi (${Math.round(r.ms)} ms), çalışıyor`;
+  const env = params.get("frames") ? { OGLIDE_TEST_FRAMES: params.get("frames") } : {};
+  program = await runProgram({
+    wasm: r.wasm, canvas: $("c"), env, stdout: out, stderr: out,
+    onTitle: (t) => (document.title = t),
+  });
+  program.done.then(({ code, reason }) => {
+    $("status").textContent = `program bitti: ${reason} (${code})`;
+    window.__metrics.lastResult = `${reason}:${code}`;
+  });
+}
+
+$("example").onchange = loadExample;
+$("run").onclick = run;
+$("stop").onclick = () => program?.stop();
+window.__run = async (examplePath) => { if (examplePath) { $("example").value = examplePath; await loadExample(); } await run(); };
+window.__output = () => $("out").textContent;
+window.__pixel = (x, y) => {
+  const gl = $("c").getContext("webgl2"); const p = new Uint8Array(4);
+  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); return [...p.slice(0, 3)];
+};
+await loadExample();
+</script>
+</body>
+</html>

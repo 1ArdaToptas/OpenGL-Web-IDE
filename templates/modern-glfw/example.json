@@ -1,0 +1,5 @@
+{
+  "title": "Dönen kare",
+  "description": "GLSL shader, VAO/VBO/EBO ve uniform ile animasyon (3.3 core).",
+  "kind": "animasyon"
+}

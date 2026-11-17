@@ -1,0 +1,5 @@
+{
+  "title": "Klavye ve fare",
+  "description": "glutKeyboardFunc ve glutMouseFunc: tıklanan yere taşınan, tuşlarla rengi değişen ve boşlukla duraklayan üçgen.",
+  "kind": "animasyon"
+}

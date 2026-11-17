@@ -1,0 +1,53 @@
+# Kurulumsuz web IDE'yi (tarayıcı modu) GitHub Pages'e yayınlar. ADR-019.
+# Derleyici WASM'ı (72 MB) repoya girmez: npm ci ile gelir, derleme burada yapılır.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Derle (Pages alt yolu = repo adı; kullanıcı sitesi ise kök)
+        env:
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          if [[ "$REPO" == *.github.io ]]; then BASE=/; else BASE="/$REPO/"; fi
+          npx tsc --noEmit
+          npx vite build --base="$BASE"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

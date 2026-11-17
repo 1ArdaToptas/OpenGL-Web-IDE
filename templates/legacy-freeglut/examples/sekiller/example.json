@@ -1,0 +1,5 @@
+{
+  "title": "Şekiller",
+  "description": "Noktalar, çizgiler, tel kafes ve yarı saydam dolgu: glPointSize, glLineWidth, glPolygonMode, glTranslatef, glScalef, glColor4f, glFlush (tek tampon).",
+  "kind": "statik"
+}

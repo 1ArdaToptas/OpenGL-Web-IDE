@@ -1,0 +1,5 @@
+{
+  "title": "Üçgen",
+  "description": "En basit başlangıç: tek renkli dolu üçgen (glBegin/glEnd, glColor3f, glFlush).",
+  "kind": "statik"
+}

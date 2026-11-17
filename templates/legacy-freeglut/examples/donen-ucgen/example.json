@@ -1,0 +1,5 @@
+{
+  "title": "Dönen üçgen",
+  "description": "glBegin/glEnd, glColor3f, glRotatef ve glutTimerFunc ile animasyon (çift tampon).",
+  "kind": "animasyon"
+}

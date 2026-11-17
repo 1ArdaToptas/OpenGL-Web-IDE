@@ -1,0 +1,9 @@
+{
+  "name": "oglide-browser-spike",
+  "private": true,
+  "description": "Faz 9 spike: C/OpenGL programını tarayıcıda derleyip (clang→WASM) WebGL2 üzerinde çalıştırma",
+  "type": "module",
+  "dependencies": {
+    "@yowasp/clang": "21.1.4-3"
+  }
+}

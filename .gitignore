@@ -1,0 +1,33 @@
+# Build outputs
+build/
+dist/
+*.exe
+*.o
+*.obj
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Local workspace / env
+workspace/
+.env
+.claude/settings.local.json
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+
+# Playwright
+test-results/
+playwright-report/
+*.egg-info/
+.venv-spike/
+
+# Üçüncü taraf skill'ler herkese açık repoya girmez; yalnız projenin kendi skill'i
+.claude/skills/*
+!.claude/skills/opengl-native-development/

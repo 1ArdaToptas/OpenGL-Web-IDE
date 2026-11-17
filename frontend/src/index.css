@@ -1,0 +1,52 @@
+@import "tailwindcss";
+@import "@xterm/xterm/css/xterm.css";
+
+/* Tasarım token'ları (ADR-015). Bileşenlerde ham hex kullanılmaz; yalnızca bu semantik roller. */
+@theme {
+  --color-bg: #0f172a;          /* uygulama zemini */
+  --color-surface: #1b2336;     /* paneller: kenar çubuğu, sekmeler, terminal başlığı */
+  --color-surface-2: #272f42;   /* hover / seçili satır */
+  --color-border: #334155;      /* ayırıcılar */
+  --color-border-strong: #475569;
+  --color-fg: #f8fafc;          /* birincil metin — bg üzerinde 17:1 */
+  --color-fg-muted: #94a3b8;    /* ikincil metin — surface üzerinde ≥ 6:1 */
+  --color-accent: #22c55e;      /* Çalıştır / başarı */
+  --color-on-accent: #0f172a;
+  --color-danger: #ef4444;      /* Durdur / hata */
+  --color-on-danger: #0f172a;
+  --color-warning: #f59e0b;
+  --color-info: #38bdf8;
+  --color-ring: #38bdf8;        /* odak halkası — bg üzerinde ≥ 3:1 */
+
+  --font-sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}

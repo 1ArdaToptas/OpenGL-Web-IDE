@@ -1,0 +1,5 @@
+{
+  "title": "Küp",
+  "description": "Perspektif projeksiyon, mat4 uniform, derinlik testi ve 36 indeksli EBO ile renkli küp (statik, 3.3 core).",
+  "kind": "statik"
+}
