@@ -8,6 +8,7 @@ import { StreamView } from "./features/stream/StreamView";
 import { NewProjectDialog } from "./features/projects/NewProjectDialog";
 import { type TerminalHandle, TerminalPane } from "./features/terminal/TerminalPane";
 import { exitSummary, toTerminalText } from "./features/terminal/terminalText";
+import { DownloadStatus, type ProgressStore } from "./features/toolbar/DownloadStatus";
 import { Toolbar } from "./features/toolbar/Toolbar";
 import { type Api, ApiError, createApi } from "./lib/api";
 import type { Diagnostic, ExampleInfo, Health, IdeEvent, Profile, ProjectInfo, StreamEvent } from "./lib/types";
@@ -65,9 +66,13 @@ interface AppProps {
   mode?: "local" | "web";
   /** Tarayıcı modunda programın canvas'ının yerleştirileceği alan (BrowserIde her çalıştırmada doldurur). */
   canvasHost?: HTMLElement;
+  /** Tarayıcı modunda derleyici indirme ilerlemesi (durum çubuğunda gösterilir). */
+  downloads?: ProgressStore;
+  /** Tarayıcı modunda eksik tarayıcı özellikleri (ör. OffscreenCanvas, JSPI) için uyarı metni. */
+  supportNote?: string | null;
 }
 
-export function App({ token, deps: injected, mode = "local", canvasHost }: AppProps) {
+export function App({ token, deps: injected, mode = "local", canvasHost, downloads, supportNote }: AppProps) {
   const web = mode === "web";
   const deps = useMemo(
     () => (web ? (injected ?? null) : token ? (injected ?? defaultDeps(token)) : null),
@@ -294,6 +299,11 @@ export function App({ token, deps: injected, mode = "local", canvasHost }: AppPr
         onStop={stop}
       />
 
+      {web && supportNote && (
+        <div role="alert" className="border-b border-border bg-warning/15 px-3 py-1.5 text-warning">
+          {supportNote}
+        </div>
+      )}
       {missing.length > 0 && (
         <div role="alert" className="border-b border-border bg-warning/15 px-3 py-1.5 text-warning">
           Derleme araçları eksik: {missing.join(", ")}. MSYS2 UCRT64 paketlerini kurun (docs/REQUIREMENTS.md TR-01).
@@ -475,6 +485,7 @@ export function App({ token, deps: injected, mode = "local", canvasHost }: AppPr
       <footer className="flex h-6 shrink-0 items-center gap-4 border-t border-border bg-surface px-3 text-[12px] text-fg-muted">
         <span>{state.project ? CONNECTION_LABEL[state.connection] : "Proje seçilmedi"}</span>
         {web && <span className="text-info">Tarayıcı modu — kod bu bilgisayarda, tarayıcıda çalışır</span>}
+        {downloads && <DownloadStatus store={downloads} />}
         {health?.toolchain.ok && <span>{health.toolchain.versions.gcc ?? health.toolchain.versions.clang ?? "gcc"}</span>}
         {state.lastExit && <span className="ml-auto">{exitSummary(state.lastExit)}</span>}
       </footer>

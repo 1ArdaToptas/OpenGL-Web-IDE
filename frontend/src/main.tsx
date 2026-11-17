@@ -2,12 +2,14 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { BrowserCompiler } from "./compiler/compiler";
+import { createProgressStore } from "./features/toolbar/DownloadStatus";
 import "./index.css";
 import { takeTokenFromLocation } from "./lib/token";
 import { ProgramRunner } from "./runtime/runner";
 import { BrowserIde } from "./web/browserIde";
 import { WEB_EXAMPLES } from "./web/examples";
 import { IdbStore, MemoryStore } from "./web/store";
+import { browserSupport, supportMessage } from "./web/support";
 
 // Token yalnızca bellekte tutulur (ADR-016); adres çubuğundan hemen silinir.
 const token = takeTokenFromLocation(window.location, window.history);
@@ -35,8 +37,11 @@ if (token) {
   };
 
   let lastQuarter = -1;
-  const compiler = new BrowserCompiler(undefined, (fraction) => {
-    // İlk derlemede derleyici (~19 MB) indirilir; durum çubuğunda değil terminalde dörtte bir adımlarla göster.
+  const downloads = createProgressStore();
+  const compiler = new BrowserCompiler(undefined, (done, total) => {
+    // İlk derlemede derleyici (~27 MB sıkıştırılmış) indirilir: durum çubuğunda sürekli, terminalde dörtte bir adımla.
+    downloads.set(done, total);
+    const fraction = total ? done / total : 0;
     const quarter = Math.floor(fraction * 4);
     if (quarter !== lastQuarter) {
       lastQuarter = quarter;
@@ -76,6 +81,8 @@ if (token) {
         mode="web"
         deps={{ api: ide.api, createSocket: (project, h) => ide.createSocket(project, h) }}
         canvasHost={canvasHost}
+        downloads={downloads}
+        supportNote={supportMessage(browserSupport())}
       />
     </StrictMode>,
   );

@@ -14,9 +14,15 @@ export default defineConfig({
   },
   use: {
     baseURL: "http://127.0.0.1:4173",
-    channel: "msedge",
     headless: true,
     viewport: { width: 1280, height: 900 },
     trace: "retain-on-failure",
   },
+  // Varsayılan Edge; Firefox ve WebKit (Safari motoru) `npm run e2e:web:all` ile.
+  projects: [
+    { name: "edge", use: { browserName: "chromium", channel: "msedge" } },
+    { name: "firefox", use: { browserName: "firefox" } },
+    // Playwright'ın Windows WebKit'inde OffscreenCanvas yok (gerçek Safari 17+'da var): yalnız çizim gerektirmeyenler
+    { name: "webkit", use: { browserName: "webkit" }, grep: /@tum-tarayicilar/ },
+  ],
 });

@@ -67,11 +67,11 @@ describe("BrowserCompiler", () => {
     const compiler = new BrowserCompiler(() => worker as unknown as Worker, progress);
     const a = compiler.compile({ "src/a.c": "" }, {});
     const b = compiler.compile({ "src/b.c": "" }, {});
-    worker.emit({ progress: 0.5 });
+    worker.emit({ progress: { done: 5_000_000, total: 10_000_000 } });
     worker.emit({ id: worker.posted[1].id, ok: true, wasm: new Uint8Array([2]), output: "" });
     worker.emit({ id: worker.posted[0].id, ok: true, wasm: new Uint8Array([1]), output: "" });
     expect((await a).wasm).toEqual(new Uint8Array([1]));
     expect((await b).wasm).toEqual(new Uint8Array([2]));
-    expect(progress).toHaveBeenCalledWith(0.5);
+    expect(progress).toHaveBeenCalledWith(5_000_000, 10_000_000);
   });
 });

@@ -57,5 +57,5 @@ Python: `.venv/Scripts/python` (venv, `pip install -e .[dev]` gerekmez; pytest `
 Testler: `.venv/Scripts/python -m pytest -q` (native testler toolchain yoksa atlanır; ~40 sn, GPU penceresi açar).
 Servis: `.venv/Scripts/python -m backend [--port 8765] [--dev-origin http://127.0.0.1:5173]` → konsoldaki `#token=` URL'si.
 Frontend (frontend/ içinde): `npm test` · `npx tsc --noEmit` · `npm run build` (backend dist'i sunar) · `npm run dev` (Vite 5173, backend `--dev-origin` ile).
-E2E (frontend/ içinde): `npm run e2e` (yerel mod, backend + GPU pencereleri) · `npm run e2e:web` (tarayıcı modu, backend'siz statik `vite preview`).
+E2E (frontend/ içinde): `npm run e2e` (yerel mod, backend + GPU pencereleri) · `npm run e2e:web` (tarayıcı modu, backend'siz statik `vite preview`, Edge) · `npm run e2e:web:all` (+Firefox, WebKit).
 Motor: `.venv/Scripts/python -m engine doctor | new <ad> --profile legacy|modern [--workspace D] | build <proj> | run <proj> [--frames N]`

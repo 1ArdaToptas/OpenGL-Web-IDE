@@ -22,6 +22,23 @@ async function createProject(page: Page, name: string, example?: string) {
   await expect(page.locator(".monaco-editor").first()).toBeVisible();
 }
 
+/** Editöre metin ekler. Firefox'ta Playwright'ın insertText'i Monaco'da metni iki kez ekliyor (test aracı
+ *  tuhaflığı; gerçek yazma etkilenmez) — orada gerçek tuş vuruşları kullanılır. */
+async function insertCode(page: Page, text: string) {
+  if (test.info().project.name === "firefox") {
+    // Gerçek yazmada Monaco parantez/tırnak kapatır ve girinti ekler; satır satır yazıp otomatik ekleri sileriz
+    const lines = text.split("\n");
+    for (const [i, line] of lines.entries()) {
+      if (line) await page.keyboard.type(line);
+      await page.keyboard.press("Shift+End");
+      await page.keyboard.press("Delete");
+      if (i < lines.length - 1) await page.keyboard.press("Enter");
+    }
+  } else {
+    await page.keyboard.insertText(text);
+  }
+}
+
 async function showTerminal(page: Page) {
   await page.getByRole("tab", { name: "Terminal" }).click();
 }
@@ -59,7 +76,7 @@ test("sonsuz döngü sayfayı dondurmaz; Durdur anında çalışır", async ({ p
   await createProject(page, uniqueName("dongu"));
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+A");
-  await page.keyboard.insertText('#include <stdio.h>\nint main(void) { printf("basladi\\n"); for (;;) {} }\n');
+  await insertCode(page, '#include <stdio.h>\nint main(void) { printf("basladi\\n"); for (;;) {} }\n');
   await button(page, "Çalıştır").click();
   await expect(page.getByRole("status")).toHaveText("Çalışıyor…", { timeout: 120_000 });
   // Ana iş parçacığı serbest: arayüz tepki veriyor
@@ -89,12 +106,12 @@ test("klavye ve fare tarayıcıdaki programa ulaşır", async ({ page }) => {
   await button(page, "Durdur").click();
 });
 
-test("derleme hatası Sorunlar paneline düşer", async ({ page }) => {
+test("derleme hatası Sorunlar paneline düşer", { tag: "@tum-tarayicilar" }, async ({ page }) => {
   await openWeb(page);
   await createProject(page, uniqueName("hata"));
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+End");
-  await page.keyboard.insertText("\nint bozuk = ;\n");
+  await insertCode(page, "\nint bozuk = ;\n");
   await button(page, "Derle").click();
   await expect(page.getByRole("tab", { name: /Sorunlar \(\d+\)/ })).toHaveAttribute("aria-selected", "true", { timeout: 120_000 });
   await expect(page.getByRole("button", { name: /src\/main\.c:\d+:\d+.*Burada bir ifade bekleniyordu/ })).toBeVisible();
@@ -149,7 +166,7 @@ test("modern: shader hatası programın kendi günlüğünde, doğru satırla g�
   await page.getByRole("list", { name: "Proje dosyaları" }).getByRole("button", { name: "basic.frag", exact: true }).click();
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+A");
-  await page.keyboard.insertText("#version 330 core\nout vec4 FragColor;\nvoid main() { FragColor = vec4(1.0) + yok; }\n");
+  await insertCode(page, "#version 330 core\nout vec4 FragColor;\nvoid main() { FragColor = vec4(1.0) + yok; }\n");
   await button(page, "Çalıştır").click();
   await showTerminal(page);
   await expect(terminal(page)).toContainText("shaders/basic.frag: shader derleme hatası", { timeout: 120_000 });
@@ -162,7 +179,7 @@ test("modern: GLFW tuş/fare geri çağırmaları; Escape while döngüsünü bi
   await createModern(page, uniqueName("glfwgirdi"));
   await page.locator(".monaco-editor .view-lines").first().click();
   await page.keyboard.press("Control+A");
-  await page.keyboard.insertText(
+  await insertCode(page, 
     [
       "#include <glad/gl.h>",
       "#include <GLFW/glfw3.h>",
@@ -206,7 +223,7 @@ test("modern: GLFW tuş/fare geri çağırmaları; Escape while döngüsünü bi
   await expect(terminal(page)).toContainText("Program çıkış kodu 0");
 });
 
-test("projeler tarayıcıda saklanır (yenileme sonrası kalır)", async ({ page }) => {
+test("projeler tarayıcıda saklanır (yenileme sonrası kalır)", { tag: "@tum-tarayicilar" }, async ({ page }) => {
   await openWeb(page);
   const name = uniqueName("kalici");
   await createProject(page, name);
@@ -215,7 +232,7 @@ test("projeler tarayıcıda saklanır (yenileme sonrası kalır)", async ({ page
   await expect(page.getByLabel("Proje", { exact: true }).locator("option", { hasText: name })).toHaveCount(1);
 });
 
-test("kod/çıktı bölücüsü sürüklenir (60/40), yenilemede korunur, çift tıkla yarıya döner", async ({ page }) => {
+test("kod/çıktı bölücüsü sürüklenir (60/40), yenilemede korunur, çift tıkla yarıya döner", { tag: "@tum-tarayicilar" }, async ({ page }) => {
   await openWeb(page);
   await createProject(page, uniqueName("bolucu"));
   const sep = page.getByRole("separator", { name: "Kod ve çıktı bölücüsü" });
@@ -241,3 +258,39 @@ test("kod/çıktı bölücüsü sürüklenir (60/40), yenilemede korunur, çift 
   await page.getByRole("separator", { name: "Kod ve çıktı bölücüsü" }).dblclick();
   await expect(page.getByRole("separator", { name: "Kod ve çıktı bölücüsü" })).toHaveAttribute("aria-valuenow", "50");
 });
+
+test("ilk derlemede derleyici indirme ilerlemesi durum çubuğunda görünür, bitince kaybolur", async ({ page }) => {
+  test.skip(test.info().project.name !== "edge", "ağ yavaşlatma CDP ile; yalnız Chromium");
+  // Yavaş bağlantı taklidi (~25 MB/sn): yerel sunucuda indirme göz açıp kapayana kadar biterdi
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Network.enable");
+  await cdp.send("Network.emulateNetworkConditions", {
+    offline: false,
+    latency: 20,
+    downloadThroughput: 25 * 1024 * 1024,
+    uploadThroughput: 1024 * 1024,
+  });
+  await openWeb(page);
+  await createProject(page, uniqueName("indir"));
+  await button(page, "Çalıştır").click();
+  const bar = page.getByRole("progressbar", { name: "Derleyici indiriliyor" });
+  await expect(bar).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/yalnız ilk seferde\) %\d+/)).toBeVisible();
+  await expect(page.getByLabel(/Program penceresi/)).toBeVisible({ timeout: 120_000 });
+  await expect(bar).toBeHidden();
+});
+
+test("OffscreenCanvas'sız tarayıcı açılışta uyarılır; çalıştırma boş ekran yerine hata verir", { tag: "@tum-tarayicilar" }, async ({ page }) => {
+  // Desteklemeyen tarayıcıyı taklit et (Edge/Firefox'ta); Playwright WebKit'te zaten yok
+  await page.addInitScript(() => {
+    delete (HTMLCanvasElement.prototype as { transferControlToOffscreen?: unknown }).transferControlToOffscreen;
+  });
+  await openWeb(page);
+  await expect(page.getByRole("alert").filter({ hasText: "eksik: OffscreenCanvas" })).toBeVisible();
+  await createProject(page, uniqueName("destek"));
+  await button(page, "Çalıştır").click();
+  await expect(page.getByRole("tab", { name: "Terminal" })).toHaveAttribute("aria-selected", "true", { timeout: 120_000 });
+  await expect(terminal(page)).toContainText("OffscreenCanvas desteklemiyor");
+  await expect(page.getByRole("status")).toHaveText("Hazır");
+});
+

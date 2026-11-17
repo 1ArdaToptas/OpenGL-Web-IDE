@@ -29,6 +29,20 @@ for (const [path, text] of Object.entries(headerFiles)) {
   node[parts.at(-1)!] = text;
 }
 
+const reportProgress = ({ doneLength, totalLength }: Progress) =>
+  self.postMessage({ progress: { done: doneLength, total: totalLength } });
+
+// @yowasp/clang 21.1.4-3 hatası: runClang önce iç "-###" çağrısını yapar ve bu çağrı fetchProgress'i
+// iletmez — indirme kütüphanenin konsol yazıcısıyla olur, ilerleme bize hiç gelmez. "--version" yolu
+// seçenekleri olduğu gibi geçirir: kaynakları ilk derlemeden önce onunla, ilerleme bildirerek indiriyoruz.
+let fetched: Promise<unknown> | null = null;
+const fetchCompiler = () =>
+  (fetched ??= runClang(["clang", "--version"], {}, { stdout: () => {}, stderr: () => {}, fetchProgress: reportProgress })
+    .catch((err) => {
+      fetched = null; // ağ hatası: bir sonraki derlemede yeniden dene
+      throw err;
+    }));
+
 self.onmessage = async (e: MessageEvent<{ id: number; files: Record<string, unknown>; args: string[] }>) => {
   const { id, files, args } = e.data;
   const t0 = performance.now();
@@ -38,11 +52,11 @@ self.onmessage = async (e: MessageEvent<{ id: number; files: Record<string, unkn
     if (bytes) output += decoder.decode(bytes, { stream: true });
   };
   try {
+    await fetchCompiler();
     const result = await runClang(args, { ...files, oglide: { include } }, {
       stdout: collect,
       stderr: collect,
-      fetchProgress: ({ doneLength, totalLength }) =>
-        self.postMessage({ progress: totalLength ? doneLength / totalLength : 0 }),
+      fetchProgress: reportProgress,
     });
     const wasm = result["app.wasm"] as Uint8Array;
     self.postMessage({ id, ok: true, wasm, output, ms: performance.now() - t0 }, [wasm.buffer]);

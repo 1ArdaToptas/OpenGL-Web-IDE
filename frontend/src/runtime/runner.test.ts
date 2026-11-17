@@ -54,6 +54,19 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe("ProgramRunner", () => {
+  it("OffscreenCanvas desteklenmiyorsa boş ekranda kalmaz: açık hata ile biter", () => {
+    const worker = new FakeWorker();
+    const { canvas } = fakeCanvas();
+    (canvas as unknown as { transferControlToOffscreen?: unknown }).transferControlToOffscreen = undefined;
+    const onOutput = vi.fn();
+    const onExit = vi.fn<(r: RunResult) => void>();
+    new ProgramRunner({ canvas, wasm: new Uint8Array([0]), onOutput, onExit, createWorker: () => worker as unknown as Worker })
+      .start();
+    expect(onOutput).toHaveBeenCalledWith("stderr", expect.stringContaining("OffscreenCanvas"));
+    expect(onExit).toHaveBeenCalledWith(expect.objectContaining({ code: 1, reason: "error" }));
+    expect(worker.posted).toHaveLength(0);
+  });
+
   it("canvas'ı OffscreenCanvas olarak ve wasm'ı aktarımla Worker'a verir", () => {
     const { worker, offscreen, wasm } = setup();
     const { msg, transfer } = worker.posted[0];

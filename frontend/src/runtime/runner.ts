@@ -55,6 +55,14 @@ export class ProgramRunner {
 
   start(): void {
     const { canvas, wasm, env = {}, timeoutMs = 300_000, profile = "legacy", files = {} } = this.o;
+    this.startedAt = performance.now();
+    if (typeof canvas.transferControlToOffscreen !== "function") {
+      // Program Worker'da çizer; bu olmadan pencere boş kalırdı — sessiz kalma, söyle.
+      this.output("stderr", "\nÇalışma hatası: bu tarayıcı OffscreenCanvas desteklemiyor; program çizemez. "
+        + "Güncel Chrome, Edge veya Firefox kullanın.\n");
+      this.finish(1, "error");
+      return;
+    }
     const worker = (this.o.createWorker ?? defaultWorker)();
     this.worker = worker;
     this.startedAt = performance.now();

@@ -368,4 +368,10 @@ describe("App", () => {
     render(<App token="tok" deps={deps} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("gcc, glfw");
   });
+
+  it("tarayıcı modunda eksik tarayıcı desteğini açılışta bildirir", async () => {
+    const deps = makeDeps();
+    render(<App token={null} mode="web" deps={deps} supportNote="Bu tarayıcı programları çalıştıramaz (eksik: WebGL2)." />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("eksik: WebGL2");
+  });
 });

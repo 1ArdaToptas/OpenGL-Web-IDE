@@ -59,15 +59,15 @@ export class BrowserCompiler {
 
   constructor(
     private createWorker: () => Worker = defaultWorker,
-    private onProgress?: (fraction: number) => void,
+    private onProgress?: (done: number, total: number) => void,
   ) {}
 
   private ensureWorker(): Worker {
     if (!this.worker) {
       this.worker = this.createWorker();
       this.worker.onmessage = (e: MessageEvent) => {
-        const m = e.data as { id?: number; progress?: number; ok?: boolean; wasm?: Uint8Array; output?: string; ms?: number };
-        if (m.progress !== undefined) return this.onProgress?.(m.progress);
+        const m = e.data as { id?: number; progress?: { done: number; total: number }; ok?: boolean; wasm?: Uint8Array; output?: string; ms?: number };
+        if (m.progress) return this.onProgress?.(m.progress.done, m.progress.total);
         const resolve = this.pending.get(m.id!);
         if (!resolve) return;
         this.pending.delete(m.id!);
