@@ -36,6 +36,13 @@ if (token) {
     return gl ? String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) : "WebGL2 yok";
   };
 
+  // Çevrimdışı önbellek: yalnız tarayıcı modu ve üretim derlemesi (geliştirmede eski dosya sunmasın)
+  if (import.meta.env.PROD && "serviceWorker" in navigator) {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
+      /* önbellek olmadan da çalışır */
+    });
+  }
+
   let lastQuarter = -1;
   const downloads = createProgressStore();
   const compiler = new BrowserCompiler(undefined, (done, total) => {

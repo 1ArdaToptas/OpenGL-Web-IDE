@@ -35,7 +35,7 @@ Program masaüstünde kendi penceresinde açılır. Alt paneldeki **Görüntü**
 
 Canlı: **https://1ardatoptas.github.io/OpenGL-Web-IDE/**
 
-Site statiktir; ziyaretçinin bir şey kurması gerekmez. İlk derlemede derleyici ~27 MB (sıkıştırılmış) indirilir — durum çubuğunda ilerleme görünür; sonra tarayıcı önbelleğinden gelir.
+Site statiktir; ziyaretçinin bir şey kurması gerekmez. İlk derlemede derleyici ~27 MB (sıkıştırılmış) indirilir — durum çubuğunda ilerleme görünür. Bir kez açılıp derleme yapıldıktan sonra site **internet olmadan da** açılır, derler ve çalıştırır (service worker önbelleği).
 
 Tarayıcı desteği: **Chrome / Edge** ve **Firefox** (iki profil, tüm testler). Gerekenler: WebAssembly, WebGL2, OffscreenCanvas; Modern (GLFW) profil ayrıca WebAssembly JSPI. Eksik özellik varsa site açılışta hangisinin eksik olduğunu söyler. Safari: Playwright'ın Windows WebKit'inde OffscreenCanvas olmadığı için çizim denenemedi (gerçek Safari 17+'da var); arayüz, derleme ve uyarı testleri WebKit'te geçiyor.
 

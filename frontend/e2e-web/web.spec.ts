@@ -294,3 +294,27 @@ test("OffscreenCanvas'sız tarayıcı açılışta uyarılır; çalıştırma bo
   await expect(page.getByRole("status")).toHaveText("Hazır");
 });
 
+
+test("bir kez açılıp derlendikten sonra internet olmadan da açılır, derler ve çalışır", async ({ page, context }) => {
+  await openWeb(page);
+  await page.evaluate(() => navigator.serviceWorker.ready); // önbellekleyici etkin
+  await createProject(page, uniqueName("cevrimdisi"));
+  await button(page, "Çalıştır").click(); // derleyici indirilir → önbelleğe girer
+  await expect(page.getByLabel(/Program penceresi/)).toBeVisible({ timeout: 120_000 });
+  await button(page, "Durdur").click();
+
+  await context.setOffline(true);
+  try {
+    await page.reload();
+    await expect(page.getByText(/Tarayıcı modu/)).toBeVisible();
+    await page.getByRole("button", { name: "Yeni proje" }).click();
+    const d = page.getByRole("dialog", { name: "Yeni proje" });
+    await d.getByLabel("Proje adı").fill(uniqueName("internetsiz"));
+    await d.getByRole("button", { name: "Oluştur" }).click();
+    await expect(page.locator(".monaco-editor").first()).toBeVisible();
+    await button(page, "Çalıştır").click();
+    await expect.poll(async () => near(await canvasCenter(page), [255, 128, 0], 12), { timeout: 60_000 }).toBe(true);
+  } finally {
+    await context.setOffline(false);
+  }
+});
