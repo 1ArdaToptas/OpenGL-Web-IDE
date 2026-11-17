@@ -33,6 +33,8 @@ Program masaüstünde kendi penceresinde açılır. Alt paneldeki **Görüntü**
 
 ## Yayın (tarayıcı modu, GitHub Pages)
 
+Canlı: **https://1ardatoptas.github.io/OpenGL-Web-IDE/**
+
 Site statiktir; ziyaretçinin bir şey kurması gerekmez (güncel Chromium tabanlı tarayıcı; ilk açılışta derleyici ~30 MB sıkıştırılmış indirilir, sonra önbellekte).
 
 1. GitHub'da **herkese açık** boş bir repo oluştur (README eklemeden).

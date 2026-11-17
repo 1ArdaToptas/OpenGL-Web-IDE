@@ -1,7 +1,7 @@
 # OpenGL Web IDE
 
 Tarayıcıda C/C++ yazıp kullanıcının kendi makinesinde (MinGW-w64 + CMake, yerel GPU) derleyip çalıştıran Web IDE.
-Durum: **Faz 10 sürüyor: kurulumsuz tarayıcı modu iki profilde çalışıyor (ADR-019); T10.7: GitHub Pages yayını (ADR-020, `.github/workflows/pages.yml`).** Tokensız açılış = tarayıcı modu, `#token` = yerel mod.
+Durum: **Faz 10 sürüyor: kurulumsuz tarayıcı modu iki profilde çalışıyor (ADR-019); canlı: https://1ardatoptas.github.io/OpenGL-Web-IDE/ (GitHub Pages, ADR-020; her `main` push'u yayınlar).** Tokensız açılış = tarayıcı modu, `#token` = yerel mod.
 
 ## Dokümanlar (tek kaynak — bilgiyi kopyalama, link ver)
 
